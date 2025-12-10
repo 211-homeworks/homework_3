@@ -4,7 +4,6 @@ import TerrainObjects.ITerrainObject;
 import TerrainObjects.enums.Direction;
 import TerrainObjects.movable.*;
 import TerrainObjects.stationary.*;
-import TerrainObjects.stationary.IHazard;
 import TerrainObjects.AbstractTerrainObject; 
 
 import java.util.List;
@@ -16,7 +15,7 @@ public class IcyTerrain {
     private final List<List<ITerrainObject>> terrainGrid;
     private final int size = 10;
 
-    private final List<Penguin> allPenguins;
+    private List<Penguin> allPenguins;
     private Penguin player;
     private final Random random = new Random();
     private final Scanner scanner = new Scanner(System.in);
@@ -110,37 +109,72 @@ public class IcyTerrain {
     }
 
     
+    
 
-    public void startGame(){ 
-        for (int turn = 1; turn <= 4; turn++) {
-            System.out.println("\n====================== TURN " + turn + " ======================");
 
-            for(Penguin currentPenguin : allPenguins){
-                if(!currentPenguin.isEliminated() && currentPenguin.getTurnsLeft() > 0){
-                    
-                    System.out.println("\n--- " + currentPenguin.getName() + "'s Turn (" + currentPenguin.getTurnsLeft() + " moves left) ---");
-                    
-                    if(currentPenguin == player){
-                        handlePlayerTurn(currentPenguin);
-                    }
-                    else {
-                        handleAllTurn(currentPenguin);
-                    }
+public void startGame(){
 
-                    if (!currentPenguin.isEliminated()) {
-                        currentPenguin.decrementTurn();
-                    }
-
-                    if(allPenguins.stream().allMatch(p->p.isEliminated() || p.getTurnsLeft()<=0)){
-                        endGame();
-                        return;
-                    }
-                }
-            displayTerrain();
+    List<Penguin> tempAll = new ArrayList<>();
+    for (Penguin p : allPenguins) {
+        if (!p.isEliminated()) {
+            tempAll.add(p);
+        }
+    }
+    
+    allPenguins = tempAll; 
+    
+    
+    for (int turn = 1; turn <= 4; turn++) {
+        System.out.println("\n====================== TURN " + turn + " ======================");
+        
+        
+        
+        List<Penguin> activePenguins = new ArrayList<>();
+        for (Penguin p : allPenguins) {
+            if (!p.isEliminated()) {
+                activePenguins.add(p);
             }
         }
-        endGame();
+        
+
+        for(Penguin currentPenguin : activePenguins){
+            if(!currentPenguin.isEliminated() && currentPenguin.getTurnsLeft() > 0){
+                
+                System.out.println("\n--- " + currentPenguin.getName() + "'s Turn (" + currentPenguin.getTurnsLeft() + " moves left) ---");
+                
+                if(currentPenguin == player){
+                    handlePlayerTurn(currentPenguin);
+                }
+                else {
+                    handleAllTurn(currentPenguin);
+                }
+                
+                
+                if (!currentPenguin.isEliminated()) {
+                    currentPenguin.decrementTurn();
+                }
+                
+                
+                boolean allTurnsUsedOrEliminated = true;
+                for (Penguin p : allPenguins) {
+                    
+                    if (!p.isEliminated() && p.getTurnsLeft() > 0) {
+                        allTurnsUsedOrEliminated = false;
+                        break; 
+                    }
+                }
+
+                if (allTurnsUsedOrEliminated) {
+                    endGame();
+                    return;
+                }
+                
+            }
+        }
+        displayTerrain();
     }
+    endGame();
+}
 
     
 
@@ -229,22 +263,24 @@ public class IcyTerrain {
                     handleRoyalPenguinBounce((RoyalPenguin)movable, direction, row, column);
                     break; 
                 }
-
+                
+                
                 setObjectAt(movable.getRow(), movable.getColumn(), null);
                 if(movable instanceof Penguin){
                     Penguin penguin = (Penguin)movable;
                     penguin.setEliminated(true);
-                    allPenguins.remove(penguin);
                     System.out.println(penguin.getName() + " fell off the edge and was eliminated.");
                 }
                 break;
             }
     
             ITerrainObject obstacle = getObjectAt(nextRow, nextColumn);
+    
             
             if(obstacle == null){
                 row = nextRow;
                 column = nextColumn;
+                
                 
                 if (movable instanceof KingPenguin && ((KingPenguin)movable).isSpecialActionUsed() && distance == 5) {
                     break;
@@ -255,12 +291,16 @@ public class IcyTerrain {
                     break;
                 }
                 
-                continue;
+                continue; 
+    
             }
-
+    
+            
+            
             setObjectAt(movable.getRow(), movable.getColumn(), null);
             movable.setPosition(row, column);
             setObjectAt(row, column, movable);
+            
             
             if (movable instanceof EmperorPenguin && ((EmperorPenguin)movable).isSpecialActionUsed()) {
                 System.out.println(((EmperorPenguin)movable).getName() + " uses special ability: moving one extra square after collision.");
@@ -271,18 +311,26 @@ public class IcyTerrain {
                 if (getObjectAt(followUpRow, followUpCol) == null) {
                     
                     setObjectAt(movable.getRow(), movable.getColumn(), null);
+                    
+                    
                     movable.setPosition(followUpRow, followUpCol);
                     setObjectAt(followUpRow, followUpCol, movable);
+                    
+                    
                     break; 
                 }
             }
     
+            
             if(obstacle instanceof Food){
                 if(movable instanceof Penguin){
                     Penguin penguin = (Penguin)movable;
                     penguin.collectFood((Food)obstacle);
                     System.out.println(penguin.getName() +" collected "+ ((Food)obstacle).toString());
-                }            
+                }
+                
+                
+                
                 row = nextRow;
                 column = nextColumn;
                 continue;
@@ -317,7 +365,10 @@ public class IcyTerrain {
                     setObjectAt(nextRow, nextColumn, null); 
                 }
                 break; 
+    
             }
+            
+            
             else if(obstacle instanceof SeaLion){
                 SeaLion seaLion = (SeaLion)obstacle;
                 
@@ -326,16 +377,20 @@ public class IcyTerrain {
                     penguin.setEliminated(true);
                     setObjectAt(penguin.getRow(), penguin.getColumn(), null); 
                     System.out.println(penguin.getName() + " was eliminated by the Sea Lion!");
-       
+                    
+                    
                     Direction seaLionDir = getOppositeDirection(direction);
                     System.out.println("Sea Lion at (" + seaLion.getRow() + "," + seaLion.getColumn() + ") starts sliding in the " + seaLionDir + " direction.");
-                                        
+                    
+                    
+                    
                     setObjectAt(seaLion.getRow(), seaLion.getColumn(), null); 
                     seaLion.setPosition(row, column); 
-                    setObjectAt(row, column, seaLion);
+                    setObjectAt(row, column, seaLion); 
+                    
+                    
                     moveSlidingObject(seaLion, seaLionDir);
                 }
-
                 else if (movable instanceof LightIceBlock) {
                     
                     Direction seaLionDir = direction;
@@ -343,6 +398,7 @@ public class IcyTerrain {
                     seaLion.onCollision(movable, direction); 
                     moveSlidingObject(seaLion, seaLionDir);
                 }
+                
                 break;
             }
             else if(obstacle instanceof LightIceBlock){
